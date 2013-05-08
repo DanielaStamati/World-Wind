@@ -1,0 +1,49 @@
+package worldwind;
+
+/**
+ * Clasa de tip ActionListener pentru locatiile de tip via
+ * 
+ * constructorul primeste ca parametru butonul activat si layerul a carei
+ * vizibilitate urmeaza sa fie modificata
+ *  
+ * @author Daniela Stamati
+ * @version beta
+ */
+
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.JButton;
+import javax.swing.JPanel;
+
+/**
+ *
+ * @author HOME
+ */
+public class ViaController implements ActionListener{
+    
+    JPanel tf;
+    JButton b;
+   
+    public ViaController(JPanel tf, JButton b)
+    {
+        this.tf=tf;
+        this.b=b;
+    }
+
+    public void actionPerformed(ActionEvent e) {
+        
+        if ("via close".equalsIgnoreCase(e.getActionCommand()))
+            {
+                tf.setVisible(false);
+            }
+            else if ("via add".equalsIgnoreCase(e.getActionCommand()))
+            {
+                tf.setVisible(true);
+                if (b!=null)
+                    b.setEnabled(false);
+            }
+        
+    }
+    
+    
+}

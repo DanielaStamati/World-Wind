@@ -1,0 +1,334 @@
+package worldwind;
+
+/**
+ * Clasa de tip JPanel cu ajutorul careia se realizeaza zoom-ul la o locatie cautata
+ *  
+ * @author Daniela Stamati
+ * @version beta
+ */
+
+import gov.nasa.worldwind.WorldWindow;
+import gov.nasa.worldwind.exception.NoItemException;
+import gov.nasa.worldwind.geom.*;
+import gov.nasa.worldwind.geom.Position;
+import gov.nasa.worldwind.layers.Layer;
+import gov.nasa.worldwind.layers.LayerList;
+import gov.nasa.worldwind.layers.MarkerLayer;
+import gov.nasa.worldwind.layers.placename.PlaceNameLayer;
+import gov.nasa.worldwind.poi.*;
+import gov.nasa.worldwind.render.Material;
+import gov.nasa.worldwind.render.markers.BasicMarker;
+import gov.nasa.worldwind.render.markers.BasicMarkerAttributes;
+import gov.nasa.worldwind.render.markers.BasicMarkerShape;
+import gov.nasa.worldwind.render.markers.Marker;
+import org.xml.sax.SAXException;
+
+import javax.swing.*;
+import javax.swing.text.*;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPathExpressionException;
+import java.awt.*;
+import java.awt.event.*;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.regex.*;
+import java.awt.event.ActionListener;
+
+/**
+ * Gazetteer search panel that allows the user to enter a search term in a text field. When a search is performed the
+ * view will animate to the top search result.
+ *
+ * @author tag
+ * @version $Id: GazetteerPanel.java 1 2011-07-16 23:22:47Z dcollins $
+ */
+public class Zoom extends JPanel
+{
+    private final WorldWindow wwd;
+    private Gazetteer gazeteer;
+    private JPanel resultsPanel;
+    private JComboBox resultsBox;
+
+    /**
+     *
+     * @param wwd                World window to animate when a search is performed.
+     * 
+     *
+     * @throws IllegalAccessException if the gazetteer class does not expose a publicly accessible no-arg constructor.
+     * @throws InstantiationException if an exception occurs while instantiating the the gazetteer class.
+     * @throws ClassNotFoundException if the gazetteer class cannot be found.
+     */
+    public Zoom(final WorldWindow wwd, String gazetteerClassName)
+        throws IllegalAccessException, InstantiationException, ClassNotFoundException
+    {
+        super(new BorderLayout());
+        this.gazeteer = new YahooGazetteer();
+        this.setBorder(new javax.swing.border.TitledBorder("Zoom"));
+
+        this.wwd = wwd;
+
+        // The text field
+        final JTextField field = new JTextField("Location:");
+        field.addActionListener(new ActionListener()
+        {
+            public void actionPerformed(final ActionEvent actionEvent)
+            {
+                EventQueue.invokeLater(new Runnable()
+                {
+                    public void run()
+                    {
+                        try
+                        {
+                            handleEntryAction(actionEvent);
+                        }
+                        catch (NoItemException e)
+                        {
+                            JOptionPane.showMessageDialog(Zoom.this,
+                                "Location not available \"" + (field.getText() != null ? field.getText() : "") + "\"\n"
+                                    + "(" + e.getMessage() + ")",
+                                "Location Not Available", JOptionPane.ERROR_MESSAGE);
+                        }
+                        catch (IllegalArgumentException e)
+                        {
+                            JOptionPane.showMessageDialog(Zoom.this,
+                                "Error parsing input \"" + (field.getText() != null ? field.getText() : "") + "\"\n"
+                                    + e.getMessage(),
+                                "Lookup Failure", JOptionPane.ERROR_MESSAGE);
+                        }
+                        catch (Exception e)
+                        {
+                            e.printStackTrace();
+                            JOptionPane.showMessageDialog(Zoom.this,
+                                "Error looking up \"" + (field.getText() != null ? field.getText() : "") + "\"\n"
+                                    + e.getMessage(),
+                                "Lookup Failure", JOptionPane.ERROR_MESSAGE);
+                        }
+                    }
+                });
+            }
+        });
+        
+        JPanel fieldPanel = new JPanel(new BorderLayout());
+        fieldPanel.add(field, BorderLayout.CENTER);
+        fieldPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 15));
+
+        // Put everything together
+       
+        this.add(fieldPanel, BorderLayout.CENTER);
+
+        resultsPanel = new JPanel(new GridLayout(1, 2));
+        resultsBox = new JComboBox();
+        resultsBox.addActionListener(new ActionListener()
+        {
+            public void actionPerformed(final ActionEvent actionEvent)
+            {
+                EventQueue.invokeLater(new Runnable()
+                {
+                    public void run()
+                    {
+                        JComboBox cb = (JComboBox) actionEvent.getSource();
+                        PointOfInterest selectedPoi = (PointOfInterest) cb.getSelectedItem();
+                        moveToLocation(selectedPoi);
+                    }
+                });
+            }
+        });
+        this.add(resultsBox,BorderLayout.SOUTH);
+        resultsPanel.setVisible(false);
+        this.add(resultsPanel, BorderLayout.EAST);
+    }
+    
+    /**
+     *
+     * Metoda prelucreaza String-urile ce reprezinta denumirile locatiilor
+     * @throws: IOException, ParserConfigurationException,
+        XPathExpressionException, SAXException, NoItemException, IllegalArgumentException
+    
+     */
+
+    private void handleEntryAction(ActionEvent actionEvent) throws IOException, ParserConfigurationException,
+        XPathExpressionException, SAXException, NoItemException, IllegalArgumentException
+    {
+        String lookupString = null;
+
+        //hide any previous results
+        resultsPanel.setVisible(false);
+        if (actionEvent.getSource() instanceof JTextComponent)
+            lookupString = ((JTextComponent) actionEvent.getSource()).getText();
+
+        if (lookupString == null || lookupString.length() < 1)
+            return;
+
+        java.util.List<PointOfInterest> poi = parseSearchValues(lookupString);
+
+        if (poi != null)
+        {
+            if (poi.size() == 1)
+            {
+                this.moveToLocation(poi.get(0));
+            }
+            else
+            {
+                resultsBox.removeAllItems();
+                for (PointOfInterest p : poi)
+                {
+                    resultsBox.addItem(p);
+                }
+                resultsPanel.setVisible(true);
+            }
+        }
+    }
+    
+     /**
+     *
+     * Metoda determina tipul inputului 
+     * @param numele locatiei
+     * @see PointOfInterest
+     * @return colectie cu obiecte de tip PointOfInterest
+     */
+
+   
+    private java.util.List<PointOfInterest> parseSearchValues(String searchStr)
+    {
+        String sepRegex = "[,]"; //other separators??
+        searchStr = searchStr.trim();
+        String[] searchValues = searchStr.split(sepRegex);
+        if (searchValues.length == 1)
+        {
+            return queryService(searchValues[0].trim());
+        }
+        else if (searchValues.length == 2) //possible coordinates
+        {
+            //any numbers at all?
+            String regex = "[0-9]";
+            Pattern pattern = Pattern.compile(regex);
+            Matcher matcher = pattern.matcher(
+                searchValues[1]); //Street Address may have numbers in first field so use 2nd
+            if (matcher.find())
+            {
+                java.util.List<PointOfInterest> list = new ArrayList<PointOfInterest>();
+                list.add(parseCoordinates(searchValues));
+                return list;
+            }
+            else
+            {
+                return queryService(searchValues[0].trim() + "+" + searchValues[1].trim());
+            }
+        }
+        else
+        {
+            //build search string and send to service
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < searchValues.length; i++)
+            {
+                sb.append(searchValues[i].trim());
+                if (i < searchValues.length - 1)
+                    sb.append("+");
+            }
+
+            return queryService(sb.toString());
+        }
+    }
+    
+    /**
+     *
+     * Metoda verifica existenta locatiei cautate si returneaza o colectie de obiecte de tip PointOfInterest
+     * @see PointOfInterest
+     * @param numele locatiei
+     * @return java.util.List<PointOfInterest>
+     */
+
+    private java.util.List<PointOfInterest> queryService(String queryString)
+    {
+        java.util.List<PointOfInterest> results = this.gazeteer.findPlaces(queryString);
+        if (results == null || results.size() == 0)
+            return null;
+        else
+            return results;
+    }
+    
+    /**
+     *
+     * @return PointOfInterest
+     * @throws IllegalArgumentException (locatie invalida)
+     */
+    private PointOfInterest parseCoordinates(String coords[])
+    {
+        if (isDecimalDegrees(coords))
+        {
+            Double d1 = Double.parseDouble(coords[0].trim());
+            Double d2 = Double.parseDouble(coords[1].trim());
+
+            return new BasicPointOfInterest(LatLon.fromDegrees(d1, d2));
+        }
+        else //may be in DMS
+        {
+            Angle aLat = Angle.fromDMS(coords[0].trim());
+            Angle aLon = Angle.fromDMS(coords[1].trim());
+
+            return new BasicPointOfInterest(LatLon.fromDegrees(aLat.getDegrees(), aLon.getDegrees()));
+        }
+    }
+
+    private boolean isDecimalDegrees(String[] coords)
+    {
+        try
+        {
+            Double.parseDouble(coords[0].trim());
+            Double.parseDouble(coords[1].trim());
+        }
+        catch (NumberFormatException nfe)
+        {
+            return false;
+        }
+
+        return true;
+    }
+    
+    /**
+     *  Realizeaza zoom-ul spre locatia dorita
+     * @param obiecte de tip PointOfInterest
+     */
+
+    public void moveToLocation(PointOfInterest location)
+    {
+        // Use a PanToIterator to iterate view to target position
+        Position pos=new Position(location.getLatlon(), 0);
+        this.wwd.getView().goTo(pos, 25e3);
+        setMarkers(this.wwd,pos);
+    }
+    
+    /**
+     *  Aplica un marker pe locatia cautata, in cazul in care mai multe locatii coincid cu input-ul vor fi puse markere in fiecare locatie
+     */
+    
+    public void setMarkers(WorldWindow wwd, Position pos)
+    {
+        ArrayList<Marker> markers = new ArrayList<Marker>();
+        Marker marker = new BasicMarker(pos,new BasicMarkerAttributes(Material.RED, BasicMarkerShape.ORIENTED_CONE_LINE, 0.7));
+        marker.setPosition(pos);
+        marker.setHeading(pos.getLatitude());
+        markers.add(marker);
+        
+        final MarkerLayer layer = new MarkerLayer();
+        layer.setOverrideMarkerElevation(true);
+        layer.setKeepSeparated(false);
+        layer.setElevation(1000d);
+        layer.setMarkers(markers);
+        insertBeforePlacenames(wwd, layer);
+    }
+    
+     public static void insertBeforePlacenames(WorldWindow wwd, Layer layer)
+    {
+        // Insert the layer into the layer list just before the placenames.
+        int compassPosition = 0;
+        LayerList layers = wwd.getModel().getLayers();
+        for (Layer l : layers)
+        {
+            if (l instanceof PlaceNameLayer)
+                compassPosition = layers.indexOf(l);
+        }
+        layers.add(compassPosition, layer);
+    }
+
+ 
+}

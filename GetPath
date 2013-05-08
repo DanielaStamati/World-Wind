@@ -1,0 +1,490 @@
+/**
+ * Clasa de tip JPanel care genereaza un traseu printre
+ * locatiile date ca input
+ * 
+ * @author Daniela Stamati
+ * @version beta
+ */
+
+package worldwind;
+
+
+import gov.nasa.worldwind.WorldWind;
+import gov.nasa.worldwind.WorldWindow;
+import gov.nasa.worldwind.avlist.AVKey;
+import gov.nasa.worldwind.awt.WorldWindowGLCanvas;
+import gov.nasa.worldwind.exception.NoItemException;
+import gov.nasa.worldwind.geom.Angle;
+import gov.nasa.worldwind.geom.LatLon;
+import gov.nasa.worldwind.geom.Position;
+import gov.nasa.worldwind.layers.CompassLayer;
+import gov.nasa.worldwind.layers.Layer;
+import gov.nasa.worldwind.layers.LayerList;
+import gov.nasa.worldwind.layers.RenderableLayer;
+import gov.nasa.worldwind.poi.BasicPointOfInterest;
+import gov.nasa.worldwind.poi.Gazetteer;
+import gov.nasa.worldwind.poi.PointOfInterest;
+import gov.nasa.worldwind.poi.YahooGazetteer;
+import gov.nasa.worldwind.render.BasicShapeAttributes;
+import gov.nasa.worldwind.render.Material;
+import gov.nasa.worldwind.render.Path;
+import gov.nasa.worldwind.render.PointPlacemark;
+import gov.nasa.worldwind.render.ShapeAttributes;
+import gov.nasa.worldwindx.examples.util.DirectedPath;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.event.*;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import javax.swing.Box;
+import javax.swing.text.JTextComponent;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.xpath.XPathExpressionException;
+import org.xml.sax.SAXException;
+
+
+
+public class GetPath extends JPanel{
+    
+    static WorldWindowGLCanvas ww;
+    JCheckBox plusVia;
+    JPanel viaPanel;
+    Gazetteer gazeteer;
+    public static final String ACTION_COMMAND_BUTTON4 = "ActionCommand_Button4";
+    public static final String ViaClose = "via close";
+    public static final String ViaAdd = "via add";
+    JTextField field;    
+    public static ArrayList<Position> locArray = new ArrayList<Position>();
+    
+    
+    
+    public GetPath( WorldWindowGLCanvas ww)
+            {
+                super(new BorderLayout());
+                this.setBorder(new javax.swing.border.TitledBorder("Route:"));
+                this.gazeteer = new YahooGazetteer();
+                this.setSize(100,500);
+                this.ww=ww;
+                
+                Box box = Box.createVerticalBox();
+                viaPanel = new JPanel (new FlowLayout(10, 1, 10));
+                
+                Button_Controller btnCont = new Button_Controller(ww,viaPanel);
+                               
+                JPanel btnPanel = new JPanel(new FlowLayout());
+                {
+                    JButton btn = new JButton("Get Path");
+                    btn.setActionCommand(ACTION_COMMAND_BUTTON4);
+                    btn.addActionListener(btnCont);
+                    btnPanel.add(btn);
+                    
+                    plusVia = new JCheckBox("Enable Via");
+                    plusVia.addItemListener(new ItemListener() {
+
+                public void itemStateChanged(ItemEvent e) {
+                    
+                    if (plusVia.isSelected())
+                        viaPanel.setVisible(true);
+                    else
+                        viaPanel.setVisible(false);
+                }
+            });
+                    btnPanel.add(plusVia);
+                }
+                
+                box.add(btnPanel);
+                field = new JTextField("Departure:");
+                
+                field.addActionListener(new ActionListener() {
+                   public void actionPerformed(ActionEvent e) {
+                            TextEntered(e);
+                   }
+                });
+                
+                box.add(field);
+                
+        //~~~~~Creating via:
+                
+                Box viaBox = Box.createVerticalBox();
+               //1
+                JPanel via1 = new JPanel();
+                field = new JTextField("Via location:");
+                
+                field.addActionListener(new ActionListener() {
+                   public void actionPerformed(ActionEvent e) {
+                            TextEntered(e);
+                   }
+                });
+ 
+                via1.add(field);
+                via1.setVisible(true);
+                
+                JButton close1= new JButton("delete");
+                close1.setActionCommand(ViaClose);
+                ViaController c1 = new ViaController(viaPanel,null);
+                close1.addActionListener(c1);
+                
+                JButton next1= new JButton("+");
+                next1.setActionCommand(ViaAdd);
+                JPanel via2 = new JPanel(); // second panel
+                ViaController n1 = new ViaController(via2, next1);
+                next1.addActionListener(n1);
+                               
+                via1.add(close1);
+                via1.add(next1);
+                viaBox.add(via1);
+               //2                
+                field = new JTextField("Via location:");
+                via2.add(field);
+                via2.setVisible(false);
+                
+                field.addActionListener(new ActionListener() {
+                   public void actionPerformed(ActionEvent e) {
+                            TextEntered(e);
+                   }
+                });
+                
+                JButton close2= new JButton("delete");
+                close2.setActionCommand(ViaClose);
+                ViaController c2 = new ViaController(via2,null);
+                close2.addActionListener(c2);
+                
+                JButton next2= new JButton("+");
+                next2.setActionCommand(ViaAdd);
+                JPanel via3 = new JPanel(); // third panel
+                ViaController n2 = new ViaController(via3,next2);
+                next2.addActionListener(n2);                
+                
+                via2.add(close2);
+                via2.add(next2);
+                viaBox.add(via2);
+               //3               
+                field = new JTextField("Via location:");
+                via3.add(field);
+                via3.setVisible(false);
+                
+                field.addActionListener(new ActionListener() {
+                   public void actionPerformed(ActionEvent e) {
+                            TextEntered(e);
+                   }
+                });
+                
+                JButton close3= new JButton("delete");
+                close3.setActionCommand(ViaClose);
+                ViaController c3 = new ViaController(via3,null);
+                close3.addActionListener(c3);
+                
+                JButton next3 = new JButton("+");
+                next3.setActionCommand(ViaAdd);
+                JPanel via4 = new JPanel(); // second panel
+                ViaController n3 = new ViaController(via4,next3);
+                next3.addActionListener(n3);
+                
+                via3.add(close3);
+                via3.add(next3);
+                viaBox.add(via3);
+               //4
+                field = new JTextField("Via location:");
+                via4.add(field);
+                via4.setVisible(false);
+                
+                field.addActionListener(new ActionListener() {
+                   public void actionPerformed(ActionEvent e) {
+                            TextEntered(e);
+                   }
+                });
+                
+                JButton close4= new JButton("delete");
+                close4.setActionCommand(ViaClose);
+                ViaController c4 = new ViaController(via4,null);
+                close4.addActionListener(c4);
+                
+                JButton next4= new JButton("+");
+                next4.setActionCommand(ViaAdd);
+                JPanel via5 = new JPanel(); // 5th panel
+                ViaController n4 = new ViaController(via5,next4);
+                next4.addActionListener(n4);
+                
+                via4.add(close4);
+                via4.add(next4);
+                viaBox.add(via4);
+               //5
+                field = new JTextField("Via location:");
+                via5.add(field);
+                via5.setVisible(false);
+                
+                field.addActionListener(new ActionListener() {
+                   public void actionPerformed(ActionEvent e) {
+                            TextEntered(e);
+                   }
+                });
+                
+                JButton close5= new JButton("delete");
+                close5.setActionCommand(ViaClose);
+                ViaController c5 = new ViaController(via5,null);
+                close5.addActionListener(c5);
+                
+                JButton next5= new JButton("+");
+                next5.setEnabled(false);
+                               
+                via5.add(close5);
+                via5.add(next5);
+                viaBox.add(via5);
+                
+                viaPanel.add(viaBox);
+                
+                /////////ARRIVAL
+                field = new JTextField("Arrival:");
+                box.add(field); 
+                
+                field.addActionListener(new ActionListener() {
+                   public void actionPerformed(ActionEvent e) {
+                            TextEntered(e);
+                   }
+                });
+                
+                viaPanel.setVisible(false);
+                
+                if (!viaPanel.isVisible())
+                    plusVia.setSelected(false);
+                    
+                
+                box.add(viaPanel);
+                this.add(box);
+                
+            }// end constructor
+    
+    /**
+     *
+     * Metoda implemeteaza comanda din action listener pentru citirea 
+     * si prelucrarea numelor locatiilor
+     * 
+     * @throws trateaza erori de tip NoItemException
+     */
+    
+     private void TextEntered(ActionEvent actionEvent) {
+                {
+                        try
+                        {
+                            handleEntryAction(actionEvent);
+                        }
+
+
+                        catch (NoItemException e)
+                        {
+                            JOptionPane.showMessageDialog(GetPath.this,
+                                "Location not available \"" + (field.getText() != null ? field.getText() : "") + "\"\n"
+                                    + "(" + e.getMessage() + ")",
+                                "Location Not Available", JOptionPane.ERROR_MESSAGE);
+                        }                        catch (IllegalArgumentException e)
+                        {
+                            JOptionPane.showMessageDialog(GetPath.this,
+                                "Error parsing input \"" + (field.getText() != null ? field.getText() : "") + "\"\n"
+                                    + e.getMessage(),
+                                "Lookup Failure", JOptionPane.ERROR_MESSAGE);
+                        }                        catch (Exception e)
+                        {
+                            e.printStackTrace();
+                            JOptionPane.showMessageDialog(GetPath.this,
+                                "Error looking up \"" + (field.getText() != null ? field.getText() : "") + "\"\n"
+                                    + e.getMessage(),
+                                "Lookup Failure", JOptionPane.ERROR_MESSAGE);
+                        }
+                    };
+            }
+    
+     /**
+     *
+     * Metoda prelucreaza String-urile ce reprezinta denumirile locatiilor
+     * @throws: IOException, ParserConfigurationException,
+        XPathExpressionException, SAXException, NoItemException, IllegalArgumentException
+     * este apelata din metoda TextEntered
+     * @see TextEntered
+     */
+     
+     private void handleEntryAction(ActionEvent actionEvent) throws IOException, ParserConfigurationException,
+        XPathExpressionException, SAXException, NoItemException, IllegalArgumentException
+    {
+        String lookupString = null;
+
+        //hide any previous results
+       
+        if (actionEvent.getSource() instanceof JTextComponent)
+            lookupString = ((JTextComponent) actionEvent.getSource()).getText();
+
+        if (lookupString == null || lookupString.length() < 1)
+            return;
+
+        java.util.List<PointOfInterest> poi = parseSearchValues(lookupString);
+
+                Position currentPos = new Position((poi.get(0)).getLatlon(), 0);
+                locArray.add(currentPos); 
+                
+        }
+     /**
+     *
+     * Metoda determina tipul inputului 
+     * @param numele locatiei
+     * @see PointOfInterest
+     * @return colectie cu obiecte de tip PointOfInterest
+     */
+     
+     private java.util.List<PointOfInterest> parseSearchValues(String searchStr)
+    {
+        String sepRegex = "[,]"; //other separators??
+        searchStr = searchStr.trim();
+        String[] searchValues = searchStr.split(sepRegex);
+        if (searchValues.length == 1)
+        {
+            return queryService(searchValues[0].trim());
+        }
+        else if (searchValues.length == 2) //possible coordinates
+        {
+            //any numbers at all?
+            String regex = "[0-9]";
+            Pattern pattern = Pattern.compile(regex);
+            Matcher matcher = pattern.matcher(
+                searchValues[1]); //Street Address may have numbers in first field so use 2nd
+            if (matcher.find())
+            {
+                java.util.List<PointOfInterest> list = new ArrayList<PointOfInterest>();
+                list.add(parseCoordinates(searchValues));
+                return list;
+            }
+            else
+            {
+                return queryService(searchValues[0].trim() + "+" + searchValues[1].trim());
+            }
+        }
+        else
+        {
+            //build search string and send to service
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < searchValues.length; i++)
+            {
+                sb.append(searchValues[i].trim());
+                if (i < searchValues.length - 1)
+                    sb.append("+");
+            }
+
+            return queryService(sb.toString());
+        }
+    }
+     
+     /**
+     *
+     * Metoda verifica existenta locatiei cautate si returneaza o colectie de obiecte de tip PointOfInterest
+     * @see PointOfInterest
+     * @param numele locatiei
+     * @return java.util.List<PointOfInterest>
+     */
+
+    private java.util.List<PointOfInterest> queryService(String queryString)
+    {
+        java.util.List<PointOfInterest> results = this.gazeteer.findPlaces(queryString);
+        if (results == null || results.size() == 0)
+            return null;
+        else
+            return results;
+    }
+
+    /**
+     *
+     * @return PointOfInterest
+     * @throws IllegalArgumentException (locatie invalida)
+     */
+    private PointOfInterest parseCoordinates(String coords[])
+    {
+        if (isDecimalDegrees(coords))
+        {
+            Double d1 = Double.parseDouble(coords[0].trim());
+            Double d2 = Double.parseDouble(coords[1].trim());
+
+            return new BasicPointOfInterest(LatLon.fromDegrees(d1, d2));
+        }
+        else //may be in DMS
+        {
+            Angle aLat = Angle.fromDMS(coords[0].trim());
+            Angle aLon = Angle.fromDMS(coords[1].trim());
+
+            return new BasicPointOfInterest(LatLon.fromDegrees(aLat.getDegrees(), aLon.getDegrees()));
+        }
+    }
+
+    private boolean isDecimalDegrees(String[] coords)
+    {
+        try
+        {
+            Double.parseDouble(coords[0].trim());
+            Double.parseDouble(coords[1].trim());
+        }
+        catch (NumberFormatException nfe)
+        {
+            return false;
+        }
+
+        return true;
+    }
+     /**
+     * Metoda traseaza efectiv traseul printre localitati
+     * 
+     */
+    public static void DrawPath()
+    {
+            RenderableLayer pathLayer = new RenderableLayer();
+
+            // Create and set an attribute bundle.
+            ShapeAttributes attrs = new BasicShapeAttributes();
+            attrs.setOutlineMaterial(Material.RED);
+            attrs.setOutlineWidth(2d);
+        
+            Path path = new DirectedPath(locArray);
+            
+            path.setAttributes(attrs);
+            path.setVisible(true);
+            path.setAltitudeMode(WorldWind.RELATIVE_TO_GROUND);
+            path.setPathType(AVKey.GREAT_CIRCLE);
+            pathLayer.addRenderable(path);
+            pathLayer.setEnabled(true);
+
+            // Add the pathLayer to the model.
+            insertBeforeCompass(ww, pathLayer);
+            pathLayer.setEnabled(true);
+            ww.getModel().getLayers().add(pathLayer);
+            
+            PointPlacemark pp;
+            
+             for (int i = 0; i <locArray.size(); i++) {
+                if (locArray.get(i) != null) {
+                    
+                     pp = new PointPlacemark(locArray.get(i));
+                     pp.setValue(AVKey.DISPLAY_NAME, (i+1));
+                     pp.setAltitudeMode(WorldWind.CLAMP_TO_GROUND);
+                     pathLayer.addRenderable(pp);
+            }
+        }
+        
+       
+    }
+    
+
+    
+     public static void insertBeforeCompass(WorldWindow wwd, Layer layer)
+    {
+        // Insert the pathLayer into the pathLayer list just before the compass.
+        int compassPosition = 0;
+        LayerList layers = wwd.getModel().getLayers();
+        for (Layer l : layers)
+        {
+            if (l instanceof CompassLayer)
+                compassPosition = layers.indexOf(l);
+        }
+        layers.add(compassPosition, layer);
+    }
+    
+
+ }
+        

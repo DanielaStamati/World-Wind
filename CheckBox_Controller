@@ -1,0 +1,46 @@
+/**
+ * Clasa care implementeaza ItemListener pentru obiectele de tip checkbox
+ *
+ * @author Daniela Stamati
+ * @version beta
+ */
+
+package worldwind;
+
+
+import gov.nasa.worldwind.WorldWindow;
+import gov.nasa.worldwind.layers.Layer;
+
+
+
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import javax.swing.JCheckBox;
+
+public class CheckBox_Controller implements ItemListener
+    {     
+       private Layer layer;
+       WorldWindow wwd;
+       boolean enabled;
+        
+       public CheckBox_Controller (Layer layer,WorldWindow wwd,boolean enabled)
+       {
+           this.layer=layer;
+           this.enabled=enabled;
+           this.wwd=wwd;
+       }
+             
+     /**
+     *
+     * Metoda activeaza layer-ul primit ca parametru in constructorul clasei
+     */
+    public void itemStateChanged(ItemEvent e) {
+         if (((JCheckBox) e.getSource()).isSelected())
+                this.layer.setEnabled(true);
+            else
+                this.layer.setEnabled(false);
+
+        }
+    }
+                       
+   

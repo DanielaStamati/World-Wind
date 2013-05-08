@@ -1,0 +1,129 @@
+/**
+ * exemplu World Wind 
+ *
+ * @author Daniela Stamati
+ * @version beta
+ */
+
+package worldwind;
+
+import gov.nasa.worldwind.BasicModel;
+import gov.nasa.worldwind.Model;
+import gov.nasa.worldwind.awt.WorldWindowGLCanvas;
+import gov.nasa.worldwind.layers.Earth.CountryBoundariesLayer;
+import gov.nasa.worldwind.layers.LayerList;
+import gov.nasa.worldwind.layers.ViewControlsLayer;
+import gov.nasa.worldwind.layers.ViewControlsSelectListener;
+import java.awt.BorderLayout;
+import java.awt.GridLayout;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+import javax.swing.border.EmptyBorder;
+
+class Cadru extends JFrame{
+    
+    public static final String ACTION_COMMAND_BUTTON1 = "ActionCommand_Button1";
+    public static final String ACTION_COMMAND_BUTTON2 = "ActionCommand_Button2";
+    public static final String ACTION_COMMAND_BUTTON3 = "ActionCommand_Button3";
+    WorldWindowGLCanvas ww;
+    CountryBoundariesLayer bound;
+
+    Cadru(Model model)throws IllegalAccessException, InstantiationException, ClassNotFoundException
+        {
+        super("Hello, WorldWind Java!");
+        setSize(700, 700);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+      
+
+        ww = new WorldWindowGLCanvas();
+        ww.setModel(model);
+        LayerList layers = ww.getModel().getLayers();
+        
+        JPanel panel = new JPanel(new BorderLayout());
+            {
+                panel.setBorder(new EmptyBorder(10, 0, 10, 0));
+
+                JPanel rightPanel = new JPanel(new BorderLayout(0, 10));
+                rightPanel.setBorder(new EmptyBorder(20, 10, 20, 10));
+
+                JPanel btnPanel = new JPanel(new GridLayout(5, 1, 0, 5));
+                {
+                    
+                    Button_Controller controller = new Button_Controller(ww,null);
+                    btnPanel.setSize(700,700);
+                     
+                    JButton btn = new JButton("EXIT");
+                    btn.setActionCommand(ACTION_COMMAND_BUTTON1);
+                    btn.addActionListener(controller);
+                    btnPanel.add(btn);
+                    
+                    btn = new JButton("About");
+                    btn.setActionCommand(ACTION_COMMAND_BUTTON2);
+                    btn.addActionListener(controller);
+                    btnPanel.add(btn);
+                    
+                    btn = new JButton("Switch View");
+                    btn.setActionCommand(ACTION_COMMAND_BUTTON3);
+                    btn.setToolTipText("Round or flat globe");
+                    btn.addActionListener(controller);
+                    btnPanel.add(btn);
+
+                }
+                
+               
+                rightPanel.add(btnPanel, BorderLayout.NORTH);               
+                panel.add(rightPanel, BorderLayout.NORTH);
+                
+                JPanel leftPanel = new JPanel(new GridLayout(5, 1, 0, 5));
+                
+            //###### BOUNDARIES ######//
+            
+                bound= new CountryBoundariesLayer();
+                bound.setEnabled(false);
+                layers.add(bound);
+                JCheckBox bound_on = new JCheckBox("Political Boundaries");
+                CheckBox_Controller controller = new CheckBox_Controller(bound,ww,bound.isEnabled());
+                bound_on.addItemListener(controller);                 
+                leftPanel.add(bound_on);    
+                
+           ///######## ZoOM ########\\\
+                Zoom zoom = new Zoom(ww,null);
+                
+           ///###### GetPath ########\\\
+                GetPath path = new GetPath(ww);
+                
+                rightPanel.add(path);
+                leftPanel.add(zoom);
+                getContentPane().add(panel,BorderLayout.EAST);
+                getContentPane().add(ww);
+                getContentPane().add(leftPanel, BorderLayout.WEST);
+                this.addViewControlLayer(ww);
+                setVisible(true);
+            }
+            
+    } //end constructor
+    
+    /**
+     *
+     * Metoda care afiseaza panoul de control a aplicatiei
+     *
+     * @param ww variabila de tip WorldWindowGLCanvas
+     * @see ViewControlsLayer 
+     */
+            
+  protected void addViewControlLayer(WorldWindowGLCanvas ww)
+    {
+        ViewControlsLayer layer = new ViewControlsLayer();
+        ww.getModel().getLayers().add(layer);
+        ww.addSelectListener(new ViewControlsSelectListener(ww, layer));
+    }
+ 
+
+    public static void main(String args[])throws IllegalAccessException, InstantiationException, ClassNotFoundException
+        {
+            
+        new Cadru(new BasicModel());
+    }
+}

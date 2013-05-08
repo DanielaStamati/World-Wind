@@ -1,0 +1,102 @@
+/**
+ * Clasa care implementeaza ActionListener 
+ * pentru butoane
+ *
+ * @author Daniela Stamati
+ * @version beta
+ */
+
+package worldwind;
+      
+import gov.nasa.worldwind.awt.WorldWindowGLCanvas;
+import gov.nasa.worldwind.globes.Earth;
+import gov.nasa.worldwind.globes.EarthFlat;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import javax.swing.Box;
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JTextField;
+
+public class Button_Controller implements ActionListener
+    {
+       WorldWindowGLCanvas ww;
+       JPanel jp;
+       JTextField field;
+       
+       public Button_Controller(WorldWindowGLCanvas ww, JPanel jp)
+       {
+           this.ww=ww;
+           this.jp=jp;
+       }
+       public void actionPerformed(ActionEvent e)
+        {
+            if ("ActionCommand_Button1".equalsIgnoreCase(e.getActionCommand()))
+            {
+                this.doActionOnButton1();
+            }
+            else if ("ActionCommand_Button2".equalsIgnoreCase(e.getActionCommand()))
+            {
+                this.doActionOnButton2();
+            }
+            else if ("ActionCommand_Button3".equalsIgnoreCase(e.getActionCommand()))
+            {
+                this.doActionOnButton3();
+            }
+            else if ("ActionCommand_Button4".equalsIgnoreCase(e.getActionCommand()))
+            {
+                this.doActionOnButton4();
+            }
+           
+        }
+       
+     /**
+     *
+     * Metoda atribuie unui buton iesirea din sistem
+     */
+            
+
+        public void doActionOnButton1()
+        {
+            System.exit(0);
+        }
+        
+    /**
+     *
+     * Metoda genereaza informatii despre dezvoltator
+     */
+        
+        public void doActionOnButton2()
+        {
+           JOptionPane.showMessageDialog(new JFrame(),"Nume: Daniela Stamati\nGrupa: 321CC", "Dezvolatator",JOptionPane.INFORMATION_MESSAGE);
+        }
+        
+     /**
+     *
+     * Metoda interschimba modul de vizualizare flat sau round globe
+     */
+        
+         public void doActionOnButton3()
+        {
+           if (!(ww.getModel().getGlobe() instanceof Earth))
+                ww.getModel().setGlobe(new Earth());
+           else
+               ww.getModel().setGlobe(new EarthFlat());
+        }
+         
+     /**
+     *
+     * Metoda face apel la clasa DrawPath
+     * @see GetPath
+     */
+         public void doActionOnButton4()
+         {
+             GetPath.DrawPath();
+                       
+         }
+         
+          
+        
+
+    }   
